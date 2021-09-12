@@ -1,0 +1,62 @@
+version: '3.7'
+
+services:
+
+  step-ca:
+    image: smallstep/step-ca
+    ports:
+      - "443:443" # Public port
+      - "3333:3333" # Rest API port
+    volumes:
+      - ./step-ca:/home/step
+      - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
+    networks:
+      - intranet
+
+  hydra:
+    image: oryd/hydra:v1.10.6-sqlite
+    ports:
+      - "4444:4444" # Public port
+      - "4445:4445" # Admin port
+      - "5555:5555" # Port for hydra token user
+    command:
+      serve -c /etc/ory/hydra.yaml all
+    volumes:
+      - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
+      - type: volume
+        source: hydra-sqlite
+        target: /var/lib/sqlite
+      - ./conf/hydra.yaml:/etc/ory/hydra.yaml
+      - ./conf/cert.crt:/etc/ory/cert.crt
+      - ./conf/cert.key:/etc/ory/cert.key
+    environment:
+      - HYDRA_URL=https://hydra:4445
+      - DSN=sqlite:///var/lib/sqlite/db.sqlite?_fk=true
+    restart: unless-stopped
+    networks:
+      - intranet
+
+  consent:
+    environment:
+      - HYDRA_ADMIN_URL=https://hydra:4445
+      - NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
+    image: oryd/hydra-login-consent-node:v1.10.6
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - intranet
+    volumes:
+      - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
+  curl:
+    image: curlimages/curl
+    networks:
+      - intranet
+    volumes:
+      - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
+
+networks:
+  intranet:
+
+volumes:
+  hydra-sqlite:
