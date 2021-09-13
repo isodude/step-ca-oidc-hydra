@@ -10,8 +10,7 @@ services:
     volumes:
       - ./step-ca:/home/step
       - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
-    networks:
-      - intranet
+    network_mode: host
 
   hydra:
     image: oryd/hydra:v1.10.6-sqlite
@@ -33,8 +32,7 @@ services:
       - HYDRA_URL=https://hydra:4445
       - DSN=sqlite:///var/lib/sqlite/db.sqlite?_fk=true
     restart: unless-stopped
-    networks:
-      - intranet
+    network_mode: host
 
   consent:
     environment:
@@ -44,19 +42,14 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
-    networks:
-      - intranet
+    network_mode: host
     volumes:
       - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
   curl:
     image: curlimages/curl
-    networks:
-      - intranet
+    network_mode: host
     volumes:
       - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
-
-networks:
-  intranet:
 
 volumes:
   hydra-sqlite:

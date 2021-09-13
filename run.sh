@@ -28,10 +28,10 @@ serve:
 
 urls:
   self:
-    issuer: https://hydra:4444
-  consent: http://consent:3000/consent
-  login: http://consent:3000/login
-  logout: http://consent:3000/logout
+    issuer: https://127.0.0.1:4444
+  consent: http://127.0.0.1:3000/consent
+  login: http://127.0.0.1:3000/login
+  logout: http://127.0.0.1:3000/logout
 
 secrets:
   system: [ $(cat /proc/sys/kernel/random/uuid) ]
