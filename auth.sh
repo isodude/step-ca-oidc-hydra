@@ -18,13 +18,13 @@ function log()
 function iinfo()
 {
     i="$1"; shift
-        info "info: [$i] $@"
+        info "[$i] $@"
 }
 
 function idie()
 {
     i="$1"; shift
-        die "$i" "info: [$i] $@"
+        die "$i" "[$i] $@"
 }
 
 function info()
@@ -50,12 +50,10 @@ function _curl()
        "${cookies[@]}"
        "$@"
        "$location")
-  printf '\n\n'
-#  info "Running: docker-compose run --rm curl ${cmd[*]}"
+  #info "Running: docker-compose run --rm curl ${cmd[*]}"
   old_location="$location"
   data="$(docker-compose run --rm curl "${cmd[@]}")"
-#  info "Got $data"
-  printf '\n\n'
+  #info "Got $data"
 }
 
 ####################
@@ -169,5 +167,5 @@ iinfo 8 "Giving response to the callback url"
 _curl -H "Referer: $referer"
 
 code="$(echo -e "$data" | grep -oP '(?<=HTTP/1.1 )[0-9]+' | tr -d '\r')"
-[ "$code" == "302" ] || idie 8 "Got $code instead of 302"
+[ "$code" == "200" ] || idie 8 "Got $code instead of 200"
 iinfo 8 "Successfully!"

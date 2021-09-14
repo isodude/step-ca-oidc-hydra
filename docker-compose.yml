@@ -38,6 +38,7 @@ services:
     environment:
       - HYDRA_ADMIN_URL=https://hydra:4445
       - NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
+      - CONFORMITY_FAKE_CLAIMS=1
     image: oryd/hydra-login-consent-node:v1.10.6
     ports:
       - "3000:3000"
