@@ -10,6 +10,16 @@ services:
     volumes:
       - ./step-ca:/home/step
       - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
+      - ./conf:/conf
+
+  step-ca-host:
+    image: smallstep/step-ca
+    volumes:
+      - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
+      - ./conf:/conf
+    extra_hosts:
+      #      - hydra:127.0.0.1
+      - caddy:127.0.0.1
     network_mode: host
 
   hydra:
@@ -48,9 +58,15 @@ services:
       - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
   curl:
     image: curlimages/curl
-    network_mode: host
     volumes:
       - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
+
+
+  curl-host:
+    image: curlimages/curl
+    volumes:
+      - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
+    network_mode: host
 
 volumes:
   hydra-sqlite:

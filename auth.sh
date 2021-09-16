@@ -56,6 +56,24 @@ function _curl()
   #info "Got $data"
 }
 
+
+function _curl_host()
+{
+  local ret_data origin cmd
+  [ -n "$old_location" ] || old_location="$location"
+
+  data=
+  cmd=(
+       "${default[@]}"
+       "${cookies[@]}"
+       "$@"
+       "$location")
+  #info "Running: docker-compose run --rm curl ${cmd[*]}"
+  old_location="$location"
+  data="$(docker-compose run --rm curl-host "${cmd[@]}")"
+  #info "Got $data"
+}
+
 ####################
 iinfo 1 "Asked Hydra for a Oauth2 Authentication CSRF Cookie"
 
@@ -169,7 +187,7 @@ iinfo 7 "Was redirected to callback app"
 ##############
 iinfo 8 "Giving response to the callback url"
 
-_curl -H "Referer: $referer"
+_curl_host -H "Referer: $referer"
 
 code="$(echo -e "$data" | grep -oP '(?<=HTTP/1.1 )[0-9]+' | tr -d '\r')"
 [ "$code" == "200" ] || idie 8 "Got $code instead of 200 ($data)"
