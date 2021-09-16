@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euo pipefail
+set -eu
 
 declare -a cookies
 cookies=()
@@ -46,7 +46,7 @@ function _curl()
 
   data=
   cmd=(
-       "${default[@]}" 
+       "${default[@]}"
        "${cookies[@]}"
        "$@"
        "$location")
@@ -61,28 +61,30 @@ iinfo 1 "Asked Hydra for a Oauth2 Authentication CSRF Cookie"
 
 location="$1"
 _curl
+code="$(echo -e "$data" | grep -oP '(?<=HTTP/2 )[0-9]+' | tr -d '\r')"
+[ "$code" == "302" ] || idie 1 "Got $code instead of 302 ($data)"
+
 cookies+=( -H "Cookie: oauth2_authentication_csrf=$(echo -e "$data" | grep -oP '(?<=: oauth2_authentication_csrf=)[^;]+' | tr -d '\r')")
 
 location="$(echo -e "$data" | grep -oP '(?<=: )http.+$' | tr -d '\r')"
 challenge="$(echo $location | cut -d '=' -f 2)"
 
 
-code="$(echo -e "$data" | grep -oP '(?<=HTTP/2 )[0-9]+' | tr -d '\r')"
-[ "$code" == "302" ] || idie 1 "Got $code instead of 302"
 iinfo 1 "Was redirected to consent app"
 
 ####################
 iinfo 2 "Getting the login form at the consent app" \
 
 _curl
+code="$(echo -e "$data" | grep -oP '(?<=HTTP/2 )[0-9]+' | tr -d '\r')"
+[ "$code" == "200" ] || idie 2 "Got $code instead of 200 ($data)"
+
 cookies+=( -H "Cookie: _csrf=$(echo -e "$data" | grep -oP '(?<=: _csrf=)[^;]+' | tr -d '\r')")
 
 location="$(echo $location | cut -d '?' -f 1)"
-code="$(echo -e "$data" | grep -oP '(?<=HTTP/1.1 )[0-9]+' | tr -d '\r')"
 f_csrf="$(echo -e "$data" | grep -oP '(?<=_csrf" value=")[^"]+')"
 raw="_csrf=$f_csrf&challenge=$challenge&email=$user&password=$pass&submit=Log+in"
 
-[ "$code" == "200" ] || idie 2 "Got $code instead of 200"
 iinfo 2 "It worked, logging in"
 
 ###############
@@ -93,18 +95,20 @@ _curl \
     -H "Origin: $(echo "$location" | cut -d '/' -f 1,2,3)" \
     -H "Referer: $old_location" \
     #
+code="$(echo -e "$data" | grep -oP '(?<=HTTP/2 )[0-9]+' | tr -d '\r')"
+[ "$code" == "302" ] || idie 3 "Got $code instead of 302 ($data)"
 
 referer="$(echo "$location" | cut -d '/' -f 1,2,3)/"
 location="$(echo -e "$data" | grep -oP '(?<=: )http.+$' | tr -d '\r')"
 
-code="$(echo -e "$data" | grep -oP '(?<=HTTP/1.1 )[0-9]+' | tr -d '\r')"
-[ "$code" == "302" ] || idie 3 "Got $code instead of 302"
 iinfo 3 "It worked, redirected towards Hydra"
 
 ##############
 iinfo 4 "Telling Hydra we managed to login"
 
 _curl    -H "Referer: $referer"
+code="$(echo -e "$data" | grep -oP '(?<=HTTP/2 )[0-9]+' | tr -d '\r')"
+[ "$code" == "302" ] || idie 4 "Got $code instead of 302 ($data)"
 
 location="$(echo -e "$data" | grep -oP '(?<=: )http.+$' | tr -d '\r')"
 
@@ -116,22 +120,20 @@ cookies+=(-H "Cookie: oauth2_consent_csrf=$(echo -e "$data" | grep -oP '(?<=: oa
 
 challenge="$(echo $location | cut -d '=' -f 2)"
 
-code="$(echo -e "$data" | grep -oP '(?<=HTTP/2 )[0-9]+' | tr -d '\r')"
-[ "$code" == "302" ] || idie 4 "Got $code instead of 302"
 iinfo 4 "Was redirected to consent app"
 
 ###############
 iinfo 5 "Fetching the form for consent at the consent app"
 
 _curl    -H "Referer: $referer"
+code="$(echo -e "$data" | grep -oP '(?<=HTTP/2 )[0-9]+' | tr -d '\r')"
+[ "$code" == "200" ] || idie 5 "God $code instead of 200 ($data)"
 
 referer="$location"
 f_csrf="$(echo -e "$data" | grep -oP '(?<=_csrf" value=")[^"]+')"
 challenge="$(echo -e "$data" | grep -oP '(?<=challenge" value=")[^"]+')"
 raw="_csrf=$f_csrf&challenge=$challenge&grant_scope=openid&grant_scope=email&grant_scope=web-origins&grant_scope=role_list&grant_scope=profile&grant_scope=rules&grant_scope=address&grant_scope=phone&grant_scope=offline_access&grant_scope=microprofile-jwn&submit=Allow+access"
 
-code="$(echo -e "$data" | grep -oP '(?<=HTTP/1.1 )[0-9]+' | tr -d '\r')"
-[ "$code" == "200" ] || idie 5 "God $code instead of 200"
 iinfo 5 "Successfully"
 
 ################
@@ -142,12 +144,14 @@ _curl \
     -H "Origin: $(echo "$location" | cut -d '/' -f 1,2,3)" \
     -H 'Content-Type: application/x-www-form-urlencoded' \
     --data-raw "$raw" \
+     #
+
+code="$(echo -e "$data" | grep -oP '(?<=HTTP/2 )[0-9]+' | tr -d '\r')"
+[ "$code" == "302" ] || idie 6 "Got $code instead of 302 ($data)"
 
 referer="$(echo "$location" | cut -d '/' -f 1,2,3)/"
 location="$(echo -e "$data" | grep -oP '(?<=: )http.+$' | tr -d '\r')"
 
-code="$(echo -e "$data" | grep -oP '(?<=HTTP/1.1 )[0-9]+' | tr -d '\r')"
-[ "$code" == "302" ] || idie 6 "Got $code instead of 302"
 iinfo 6 "Was redirected to hydra"
 iinfo 6 "Allowing openid,email at the consent app"
 
@@ -155,10 +159,11 @@ iinfo 6 "Allowing openid,email at the consent app"
 iinfo 7 "Telling Hydra we managed to consent"
 
 _curl -H "Referer: $referer"
+code="$(echo -e "$data" | grep -oP '(?<=HTTP/2 )[0-9]+' | tr -d '\r')"
+[ "$code" == "302" ] || idie 7 "Got $code instead of 302 ($data)"
+
 location="$(echo -e "$data" | grep -oP '(?<=: )http.+$' | tr -d '\r')"
 
-code="$(echo -e "$data" | grep -oP '(?<=HTTP/2 )[0-9]+' | tr -d '\r')"
-[ "$code" == "302" ] || idie 7 "Got $code instead of 302"
 iinfo 7 "Was redirected to callback app"
 
 ##############
@@ -167,5 +172,5 @@ iinfo 8 "Giving response to the callback url"
 _curl -H "Referer: $referer"
 
 code="$(echo -e "$data" | grep -oP '(?<=HTTP/1.1 )[0-9]+' | tr -d '\r')"
-[ "$code" == "200" ] || idie 8 "Got $code instead of 200"
+[ "$code" == "200" ] || idie 8 "Got $code instead of 200 ($data)"
 iinfo 8 "Successfully!"
