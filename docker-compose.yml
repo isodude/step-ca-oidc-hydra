@@ -2,11 +2,26 @@ version: '3.7'
 
 services:
 
+  caddy:
+    image: caddy
+    ports:
+      - "443:443"
+      - "4444:4444"
+      - "3443:3443"
+      - "10000:10000"
+    volumes:
+    volumes:
+      - ./conf/Caddyfile:/Caddyfile
+      - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
+      - ./conf/cert.crt:/cert.crt
+      - ./conf/cert.key:/cert.key
+    command:
+      caddy run --config /Caddyfile
+
   step-ca:
     image: smallstep/step-ca
     ports:
-      - "443:443" # Public port
-      - "3333:3333" # Rest API port
+      - "443"
     volumes:
       - ./step-ca:/home/step
       - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
@@ -22,27 +37,26 @@ services:
       - caddy:127.0.0.1
     network_mode: host
 
+
   hydra:
     image: oryd/hydra:v1.10.6-sqlite
-    ports:
-      - "4444:4444" # Public port
-      - "4445:4445" # Admin port
-      - "5555:5555" # Port for hydra token user
     command:
       serve -c /etc/ory/hydra.yaml all
+    ports:
+      - "4444"
+      - "4445"
     volumes:
       - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
       - type: volume
         source: hydra-sqlite
         target: /var/lib/sqlite
       - ./conf/hydra.yaml:/etc/ory/hydra.yaml
-      - ./conf/cert.crt:/etc/ory/cert.crt
-      - ./conf/cert.key:/etc/ory/cert.key
+      - ./conf/cert.crt:/cert.crt
+      - ./conf/cert.key:/cert.key
     environment:
       - HYDRA_URL=https://hydra:4445
       - DSN=sqlite:///var/lib/sqlite/db.sqlite?_fk=true
     restart: unless-stopped
-    network_mode: host
 
   consent:
     environment:
@@ -50,12 +64,12 @@ services:
       - NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
       - CONFORMITY_FAKE_CLAIMS=1
     image: oryd/hydra-login-consent-node:v1.10.6
-    ports:
-      - "3000:3000"
     restart: unless-stopped
-    network_mode: host
+    ports:
+      - "3000"
     volumes:
       - ./conf/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
+
   curl:
     image: curlimages/curl
     volumes:
